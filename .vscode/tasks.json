@@ -1,0 +1,27 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Full Download Process",
+			"type": "shell",
+			"command": "python3 fetch_source.py && caffeinate -i python3 download_video.py",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Fetch Source",
+			"type": "shell",
+			"command": "python3 fetch_source.py",
+			"problemMatcher": []
+		},
+		{
+			"label": "Download Video",
+			"type": "shell",
+			"command": "caffeinate -i python3 download_video.py",
+			"problemMatcher": []
+		}
+	]
+}

@@ -3,9 +3,10 @@ import os
 import re
 
 import requests
+from tqdm import tqdm
 
 
-def download_video(html_file, output_name=None):
+def download_video(html_file='output.html', output_name=None):
     try:
         with open(html_file, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -39,21 +40,39 @@ def download_video(html_file, output_name=None):
 
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Referer': 'https://www.tokyvideo.com/'}
 
+    # Gestion de la reprise du téléchargement
+    file_mode = 'wb'
+    initial_pos = 0
+    if os.path.exists(output_name):
+        initial_pos = os.path.getsize(output_name)
+        # On ne reprend que si le fichier n'est pas vide
+        if initial_pos > 0:
+            headers['Range'] = f'bytes={initial_pos}-'
+            file_mode = 'ab'
+            print(f"Reprise du téléchargement à partir de {initial_pos} octets...")
+
     try:
         response = requests.get(video_url, headers=headers, stream=True)
+        
+        # Si on demande un Range et que le serveur ne le supporte pas (pas 206), on recommence à zéro
+        if response.status_code == 416: # Range unsatisfiable
+             print("Le fichier est probablement déjà complet.")
+             return
+        elif response.status_code != 206 and initial_pos > 0:
+            print("Le serveur ne supporte pas la reprise. Redémarrage à zéro...")
+            file_mode = 'wb'
+            initial_pos = 0
+            response = requests.get(video_url, headers={'User-Agent': headers['User-Agent'], 'Referer': headers['Referer']}, stream=True)
+
         response.raise_for_status()
 
-        total_size = int(response.headers.get('content-length', 0))
-        block_size = 1024 * 1024  # 1MB
+        total_size = int(response.headers.get('content-length', 0)) + initial_pos
+        block_size = 1024  # 1KB
 
-        downloaded = 0
-        with open(output_name, 'wb') as f:
+        with open(output_name, file_mode) as f, tqdm(total=total_size, unit='iB', unit_scale=True, desc=output_name, leave=True, initial=initial_pos) as bar:
             for data in response.iter_content(block_size):
-                f.write(data)
-                downloaded += len(data)
-                if total_size:
-                    done = int(50 * downloaded / total_size)
-                    print(f"\r[{'=' * done}{' ' * (50-done)}] {downloaded/(1024*1024):.2f}MB / {total_size/(1024*1024):.2f}MB", end='')
+                size = f.write(data)
+                bar.update(size)
 
         print(f"\n\nTéléchargement terminé : {os.path.abspath(output_name)}")
 
@@ -62,9 +81,4 @@ def download_video(html_file, output_name=None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Télécharge une vidéo à partir d'un fichier HTML Tokyvideo.")
-    parser.add_argument("file", help="Chemin vers le fichier HTML source")
-    parser.add_argument("-o", "--output", help="Nom du fichier de sortie")
-
-    args = parser.parse_args()
-    download_video("/Users/gaston/SandBox/output.html")
+    download_video()

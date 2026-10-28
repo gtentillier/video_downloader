@@ -21,8 +21,7 @@ def save_page_source(url, filename):
 
 
 if __name__ == "__main__":
-
-    target_url = "https://www.tokyvideo.com/fr/video/the-truman-show-3"
+    from params import target_url
     output_file = "output.html"
 
     result = save_page_source(target_url, output_file)
