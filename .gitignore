@@ -2,3 +2,4 @@
 output.html
 venv/
 *.mp4
+params.cpython-*.pyc
